@@ -1,4 +1,3 @@
-/*The bfs parallel code has been referenced from https://github.com/siddharths2710/cuda_bfs*/
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -70,6 +69,14 @@ int edgeNumber = 0;
 HashMap map[1000];
 Node node[NUM_NODES];
 int edges[NUM_NODES*(NUM_NODES-1)];
+
+void swap(string a, int l, int i) 
+{ 
+    char temp; 
+    temp = a[l];
+    a[l] = a[i]; 
+    a[i] = temp; 
+} 
 
 
 void permute(string a, int l, int r) 
