@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <bits/stdc++.h>
 #include "Helper.h"
-#include "Helper.cu"
 using namespace std;
 
 #define BLOCK_SIZE 512
@@ -117,7 +116,7 @@ public:
 
 };
 
-#define K 5
+#define K 10
 
 __global__ void parAStar(PriorityQueue *pqC) {
 
