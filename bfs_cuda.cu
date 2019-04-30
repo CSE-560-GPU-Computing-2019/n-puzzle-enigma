@@ -1,4 +1,6 @@
-
+/* Reference : The get neighbour is implemented by ourseleves, whereas the CUDA_BFS_KERNEL was referenced from https://github.com/siddharths2710/cuda_bfs 
+				and the permutation generation code was referenced from https://www.geeksforgeeks.org/write-a-c-program-to-print-all-permutations-of-a-given-string/
+*/ 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <cuda.h>
@@ -11,10 +13,11 @@
 #include <iostream>
 
 using namespace std;
-// #include <bits/stdc++.h>
-// #include <conio.h>
+
 #define NUM_NODES 24
-// #define NUM_PERMUTATIONS 
+#define N 2
+#define COMB "1230"
+#define STR "abcd"
 
 typedef struct
 {
@@ -26,8 +29,19 @@ typedef struct
 {
 	int id;
 	string s;
-	/* data */
+
 } HashMap;
+
+int count = 0;
+int edgeNumber = 0;
+HashMap map[10000000];
+Node node[NUM_NODES];
+
+// index value is  = NUM_NODES*(NUM_NODES-1);
+int edges[NUM_NODES*(NUM_NODES-1)];
+// #define NUM_PERMUTATIONS 
+
+
 
 __global__ void CUDA_BFS_KERNEL(Node *Va, int *Ea, bool *Fa, bool *Xa, int *Ca,bool *done)
 {
@@ -47,6 +61,7 @@ __global__ void CUDA_BFS_KERNEL(Node *Va, int *Ea, bool *Fa, bool *Xa, int *Ca,b
 		int i;
 		int start = Va[id].start;
 		int end = start + Va[id].length;
+		
 		for (int i = start; i < end; i++) 
 		{
 			int nid = Ea[i];
@@ -57,25 +72,18 @@ __global__ void CUDA_BFS_KERNEL(Node *Va, int *Ea, bool *Fa, bool *Xa, int *Ca,b
 				Fa[nid] = true;
 				*done = false;
 			}
-
 		}
 
 	}
 
 }
 
-int count=0;
-int edgeNumber = 0;
-HashMap map[1000];
-Node node[NUM_NODES];
-int edges[NUM_NODES*(NUM_NODES-1)];
-
 void swap(string a, int l, int i) 
 { 
-    char temp; 
-    temp = a[l];
-    a[l] = a[i]; 
-    a[i] = temp; 
+	char temp; 
+	temp = a[l];
+	a[l] = a[i]; 
+	a[i] = temp; 
 } 
 
 
@@ -84,43 +92,43 @@ void permute(string a, int l, int r)
    int i; 
    if (l == r) 
    {
-   	 // cout<<a<<endl;
-     map[count].id = count;
-     map[count].s = a;
-     count+=1;
+	 // cout<<a<<endl;
+		map[count].id = count;
+		map[count].s = a;
+		count+=1;
    }
    else
    { 
-       for (i = l; i <= r; i++) 
-       { 
-          char temp; 
-		    temp = a[l];
-		    a[l] = a[i]; 
-		    a[i] = temp;
-          permute(a, l+1, r); 
+	   for (i = l; i <= r; i++) 
+	   { 
+		  	char temp; 
+			temp = a[l];
+			a[l] = a[i]; 
+			a[i] = temp;
+		  	permute(a, l+1, r); 
  
-		    temp = a[l];
-		    a[l] = a[i]; 
-		    a[i] = temp; //backtrack 
-       } 
+			temp = a[l];
+			a[l] = a[i]; 
+			a[i] = temp; //backtrack 
+	   } 
    } 
 }
 
 void getneighbour(string s, int i)
 {
-	int mat[2][2];
-	for(int j=0;j<2;j++)
+	int mat[N][N];
+	for(int j=0;j<N;j++)
 	{
-		for(int k=0;k<2;k++)
+		for(int k=0;k<N;k++)
 		{
-			mat[j][k] = s[j*2+k]-'0';
+			mat[j][k] = s[j*N+k]-'0';
 		}
 	}
 
 	int posx,posy;
-	for(int j=0;j<2;j++)
+	for(int j=0;j<N;j++)
 	{
-		for(int k=0;k<2;k++)
+		for(int k=0;k<N;k++)
 		{
 			if(mat[j][k] == 0)
 			{
@@ -133,279 +141,807 @@ void getneighbour(string s, int i)
 
 	 if (posx == 0 && posy == 0) 
 	 {
-        int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        node[i].start = edgeNumber;
-        node[i].length = 2;
+		node[i].start = edgeNumber;
+		node[i].length = 2;
 
-        // Moving 0 to the right
-        Temp[posx][posy] = Temp[posx][posy+1];
-        Temp[posx][posy+1] = 0;
+		// Moving 0 to the right
+		Temp[posx][posy] = Temp[posx][posy+1];
+		Temp[posx][posy+1] = 0;
 
-        string s1 = "abcd";
+		string s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
-
-
-        // int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
-
-        // Moving 0 to the bottom
-        Temp[posx][posy] = Temp[posx+1][posy];
-        Temp[posx+1][posy] = 0;
-
-        // s1 = "abcd";
-
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
-
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
-    }
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
 
 
-    if (posx == 0 && posy == 1) 
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the bottom
+		Temp[posx][posy] = Temp[posx+1][posy];
+		Temp[posx+1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+
+
+	if (posx == 0 && posy == 1) 
 	{
-        int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        node[i].start = edgeNumber;
-        node[i].length = 2;
+		node[i].start = edgeNumber;
+		node[i].length = 2;
 
-        // Moving 0 to the left
-        Temp[posx][posy] = Temp[posx][posy-1];
-        Temp[posx][posy-1] = 0;
+		// Moving 0 to the left
+		Temp[posx][posy] = Temp[posx][posy-1];
+		Temp[posx][posy-1] = 0;
 
-        string s1 = "abcd";
+		string s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
 
 
-        // int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        // Moving 0 to the bottom
-        Temp[posx][posy] = Temp[posx+1][posy];
-        Temp[posx+1][posy] = 0;
+		// Moving 0 to the bottom
+		Temp[posx][posy] = Temp[posx+1][posy];
+		Temp[posx+1][posy] = 0;
 
-        // s1 = "abcd";
+		// s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
-    }
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
 
-    if (posx == 1 && posy == 0) 
+	if (posx == 1 && posy == 0) 
 	 {
-        int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        node[i].start = edgeNumber;
-        node[i].length = 2;
+		node[i].start = edgeNumber;
+		node[i].length = 2;
 
-        // Moving 0 to the right
-        Temp[posx][posy] = Temp[posx][posy+1];
-        Temp[posx][posy+1] = 0;
+		// Moving 0 to the right
+		Temp[posx][posy] = Temp[posx][posy+1];
+		Temp[posx][posy+1] = 0;
 
-        string s1 = "abcd";
+		string s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
 
 
-        // int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        // Moving 0 to the top
-        Temp[posx][posy] = Temp[posx-1][posy];
-        Temp[posx-1][posy] = 0;
+		// Moving 0 to the top
+		Temp[posx][posy] = Temp[posx-1][posy];
+		Temp[posx-1][posy] = 0;
 
-        // s1 = "abcd";
+		// s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
-    }
-    if (posx == 1 && posy == 1) 
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+	if (posx == 1 && posy == 1) 
 	 {
-        int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        node[i].start = edgeNumber;
-        node[i].length = 2;
+		node[i].start = edgeNumber;
+		node[i].length = 2;
 
-        // Moving 0 to the left
-        Temp[posx][posy] = Temp[posx][posy-1];
-        Temp[posx][posy-1] = 0;
+		// Moving 0 to the left
+		Temp[posx][posy] = Temp[posx][posy-1];
+		Temp[posx][posy-1] = 0;
 
-        string s1 = "abcd";
+		string s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
 
 
-        // int Temp[2][2];
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		Temp[j][k] = mat[j][k];
-        	}
-        }
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
 
-        // Moving 0 to the top
-        Temp[posx][posy] = Temp[posx-1][posy];
-        Temp[posx-1][posy] = 0;
+		// Moving 0 to the top
+		Temp[posx][posy] = Temp[posx-1][posy];
+		Temp[posx-1][posy] = 0;
 
-        // s1 = "abcd";
+		// s1 = STR;
 
-        for(int j=0;j<2;j++)
-        {
-        	for(int k=0;k<2;k++)
-        	{
-        		s1[j*2+k] = Temp[j][k]+'0';
-        	}
-        }
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
 
-        for(int j=0;j<24;j++)
-        {
-        	if (map[j].s == s1)
-        	{
-        		edges[edgeNumber++] = map[j].id;
-        	}
-        }
-    }
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+	if (posy == 0) {
+
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		node[i].start = edgeNumber;
+		node[i].length = 3;
+
+		// Moving 0 to the top
+		Temp[posx][posy] = Temp[posx-1][posy];
+		Temp[posx-1][posy] = 0;
+
+		string s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the bottom
+		Temp[posx][posy] = Temp[posx+1][posy];
+		Temp[posx+1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the right
+		Temp[posx][posy] = Temp[posx][posy+1];
+		Temp[posx][posy+1] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+
+	if (posy == N-1) {
+
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		node[i].start = edgeNumber;
+		node[i].length = 3;
+
+		// Moving 0 to the top
+		Temp[posx][posy] = Temp[posx-1][posy];
+		Temp[posx-1][posy] = 0;
+
+		string s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the bottom
+		Temp[posx][posy] = Temp[posx+1][posy];
+		Temp[posx+1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the left
+		Temp[posx][posy] = Temp[posx][posy-1];
+		Temp[posx][posy-1] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+
+	if (posx == 0) {
+
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		node[i].start = edgeNumber;
+		node[i].length = 3;
+
+		// Moving 0 to the left
+		Temp[posx][posy] = Temp[posx][posy-1];
+		Temp[posx][posy-1] = 0;
+
+		string s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the right
+		Temp[posx][posy] = Temp[posx][posy+1];
+		Temp[posx][posy+1] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the bottom
+		Temp[posx][posy] = Temp[posx+1][posy];
+		Temp[posx+1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+
+	if(posx == N-1) {
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		node[i].start = edgeNumber;
+		node[i].length = 3;
+
+		// Moving 0 to the left
+		Temp[posx][posy] = Temp[posx][posy-1];
+		Temp[posx][posy-1] = 0;
+
+		string s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the right
+		Temp[posx][posy] = Temp[posx][posy+1];
+		Temp[posx][posy+1] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the top
+		Temp[posx][posy] = Temp[posx-1][posy];
+		Temp[posx-1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
+
+	else {
+
+		int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		node[i].start = edgeNumber;
+		node[i].length = 4;
+
+		// Moving 0 to the left
+		Temp[posx][posy] = Temp[posx][posy-1];
+		Temp[posx][posy-1] = 0;
+
+		string s1 = STR;
+
+		for(int j=0;j<2;j++)
+		{
+			for(int k=0;k<2;k++)
+			{
+				s1[j*2+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+
+		// int Temp[2][2];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the right
+		Temp[posx][posy] = Temp[posx][posy+1];
+		Temp[posx][posy+1] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+		// int Temp[N][N];
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the bottom
+		Temp[posx][posy] = Temp[posx+1][posy];
+		Temp[posx+1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				Temp[j][k] = mat[j][k];
+			}
+		}
+
+		// Moving 0 to the top
+		Temp[posx][posy] = Temp[posx-1][posy];
+		Temp[posx-1][posy] = 0;
+
+		// s1 = STR;
+
+		for(int j=0;j<N;j++)
+		{
+			for(int k=0;k<N;k++)
+			{
+				s1[j*N+k] = Temp[j][k]+'0';
+			}
+		}
+
+		for(int j=0;j<NUM_NODES;j++)
+		{
+			if (map[j].s == s1)
+			{
+				edges[edgeNumber++] = map[j].id;
+			}
+		}
+	}
 } 
 
 // The BFS frontier corresponds to all the nodes being processed at the current level.
@@ -413,55 +949,22 @@ void getneighbour(string s, int i)
 int main()
 {
 
-	// HashMap map[24];
-	// map[0].id = 0;
-	// map[0].s = '0123';
+	permute(COMB, 0, N*N-1);
 
-
-	// for(int )
-	permute("2103", 0, 3);
-
-	for(int i=0;i<24;i++)
+	for(int i=0;i<NUM_NODES;i++)
 	{
 		cout<<map[i].id<<" "<<map[i].s<<endl;
+		// getneighbour(map[i].s, map[i].id);
 	}
 
-	// getneighbour("0123", 0);
-
-	
-	
-	//int edgesSize = 2 * NUM_NODES;
-
-	for(int i=0;i<24;i++)
+	for(int i=0;i<NUM_NODES;i++)
 	{
 		string s = map[i].s;
 		int id = map[i].id;
 		getneighbour(s, i);
 	}
 
-	// node[0].start = 0;
-	// node[0].length = 2;
-
-	// node[1].start = 2;
-	// node[1].length = 2;
-
-	// node[2].start = 4;
-	// node[2].length = 2;
-
-	// node[3].start = 6;
-	// node[3].length = 2;
-
-	// node[4].start = 5;
-	// node[4].length = 0;
-
-	// edges[0] = 1;
-	// edges[1] = 2;	
-	// edges[2] = 0;
-	// edges[3] = 3;
-	// edges[4] = 0;
-	// edges[5] = 3;
-	// edges[6] = 1;
-	// edges[7] = 2;
+	cout<<"Done"<<endl;
 
 	bool frontier[NUM_NODES] = { false };
 	bool visited[NUM_NODES] = { false };
@@ -470,13 +973,18 @@ int main()
 	int source = 0;
 	frontier[source] = true;
 
+	cudaEvent_t start_kernel, stop_kernel;
+    cudaEventCreate(&start_kernel);
+    cudaEventCreate(&stop_kernel);
+	cudaEventRecord(start_kernel);
+
 	Node* Va;
 	cudaMalloc((void**)&Va, sizeof(Node)*NUM_NODES);
 	cudaMemcpy(Va, node, sizeof(Node)*NUM_NODES, cudaMemcpyHostToDevice);
 
 	int* Ea;
-	cudaMalloc((void**)&Ea, sizeof(Node)*NUM_NODES);
-	cudaMemcpy(Ea, edges, sizeof(Node)*NUM_NODES, cudaMemcpyHostToDevice);
+	cudaMalloc((void**)&Ea, sizeof(int)*(NUM_NODES*(NUM_NODES+1)));
+	cudaMemcpy(Ea, edges, sizeof(int)*(NUM_NODES*(NUM_NODES+1)), cudaMemcpyHostToDevice);
 
 	bool* Fa;
 	cudaMalloc((void**)&Fa, sizeof(bool)*NUM_NODES);
@@ -502,21 +1010,31 @@ int main()
 	cudaMalloc((void**)&d_done, sizeof(bool));
 	printf("\n\n");
 	int count = 0;
+    
+    float runningTime = 0;
 
 	printf("Order: \n\n");
-	do {
+	do 
+	{
 		count++;
 		done = true;
 		cudaMemcpy(d_done, &done, sizeof(bool), cudaMemcpyHostToDevice);
+		
 		CUDA_BFS_KERNEL <<<num_blks, threads >>>(Va, Ea, Fa, Xa, Ca,d_done);
 		cudaMemcpy(&done, d_done , sizeof(bool), cudaMemcpyDeviceToHost);
 
-	} while (!done);
+	} while (done!=true);
 
-
-
-
+	
 	cudaMemcpy(cost, Ca, sizeof(int)*NUM_NODES, cudaMemcpyDeviceToHost);
+
+	cudaEventRecord(stop_kernel);
+	cudaEventSynchronize(stop_kernel);
+	float k_time = 0;
+    cudaEventElapsedTime(&k_time, start_kernel, stop_kernel);
+    // runningTime+=k_time;
+    cout << "\nGPU TIME : " <<k_time <<"ms"<<" "<<"Level : "<<count<<std::endl<<std::endl;
+		
 	
 	printf("Number of times the kernel is called : %d \n", count);
 
@@ -526,5 +1044,11 @@ int main()
 		printf( "%d    ", cost[i]);
 	printf("\n");
 	// _getch();
+	cudaFree(Va);
+	cudaFree(Ea);
+	cudaFree(Fa);
+	cudaFree(Xa);
+	cudaFree(Xa);
+	cudaFree(d_done);
 	
 }
